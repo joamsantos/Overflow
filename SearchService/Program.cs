@@ -44,7 +44,7 @@ if (string.IsNullOrEmpty(typesenseUri))
 var uri = new Uri(typesenseUri);
 builder.Services.AddTypesenseClient(config =>
 {
-    config.ApiKey = typesenseApiKey;
+    config.ApiKey = typesenseApiKey!;
     config.Nodes = new List<Node>
     {
         new(uri.Host, uri.Port.ToString(), uri.Scheme)
@@ -82,6 +82,21 @@ app.MapGet("/search", async (string query, ITypesenseClient client) =>
     {
         searchParams.FilterBy = $"tags:=[{tag}]";
     }
+
+    try
+    {
+        var result = await client.Search<SearchQuestion>("questions", searchParams);
+        return Results.Ok(result.Hits.Select(hit => hit.Document));
+    }
+    catch (Exception e)
+    {
+        return Results.Problem("Typesense search failed", e.Message);
+    }
+});
+
+app.MapGet("/search/similiar-titles", async (string query, ITypesenseClient client) =>
+{
+    var searchParams = new SearchParameters(query, "title");
 
     try
     {
